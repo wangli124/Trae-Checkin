@@ -1,0 +1,32 @@
+name: Trae 每日签到
+
+on:
+  schedule:
+    - cron: "23 16 * * *"
+  workflow_dispatch:
+
+jobs:
+  checkin:
+    runs-on: ubuntu-latest
+    # 定时任务在 GitHub 侧一律按 UTC 触发，这里是北京时间 00:23。
+    # 想改时间就把小时减 8：北京 03:23 → cron "23 19 * * *"。
+    steps:
+      - uses: actions/checkout@v5
+
+      # refreshToken 每次续期都会产生新值、旧值作废，而 Actions 的工作目录
+      # 是一次性的。所以必须把续期后的 token 用缓存带到下一次运行。
+      - name: 恢复 token 缓存
+        uses: actions/cache@v5
+        with:
+          path: .trae_token_cache.json
+          key: trae-token-${{ github.run_id }}
+          restore-keys: |
+            trae-token-
+
+      - name: 签到
+        env:
+          TRAE_ACCOUNTS: ${{ secrets.TRAE_ACCOUNTS }}
+          QYWX_TOKEN: ${{ secrets.QYWX_TOKEN }}
+          PLUSPLUS_TOKEN: ${{ secrets.PLUSPLUS_TOKEN }}
+          TRAE_WEBHOOK: ${{ secrets.TRAE_WEBHOOK }}
+        run: python3 03_checkin.py
